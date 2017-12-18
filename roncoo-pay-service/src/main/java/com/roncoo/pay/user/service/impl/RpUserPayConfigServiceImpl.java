@@ -22,6 +22,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.roncoo.pay.common.core.enums.PayWayEnum;
 import com.roncoo.pay.common.core.enums.PublicEnum;
@@ -134,15 +135,30 @@ public class RpUserPayConfigServiceImpl implements RpUserPayConfigService{
 	 * 创建用户支付配置
 	 */
 	@Override
+	@Transactional(rollbackFor = Exception.class)
 	public void createUserPayConfig(String userNo, String userName, String productCode, String productName, Integer riskDay,
 			String fundIntoType, String isAutoSett, String appId, String merchantId, String partnerKey,
 			String ali_partner, String ali_sellerId, String ali_key, String ali_appid, String ali_rsaPrivateKey, String ali_rsaPublicKey)  throws PayBizException{
-		
+
+		createUserPayConfig( userNo,  userName,  productCode,  productName, riskDay,
+				 fundIntoType,  isAutoSett,  appId,  merchantId,  partnerKey,
+				 ali_partner,  ali_sellerId,  ali_key,  ali_appid,  ali_rsaPrivateKey,  ali_rsaPublicKey ,  null ,  null);
+	}
+
+	/**
+	 * 创建用户支付配置
+	 */
+	@Override
+	@Transactional(rollbackFor = Exception.class)
+	public void createUserPayConfig(String userNo, String userName, String productCode, String productName, Integer riskDay,
+			String fundIntoType, String isAutoSett, String appId, String merchantId, String partnerKey,
+			String ali_partner, String ali_sellerId, String ali_key, String ali_appid, String ali_rsaPrivateKey, String ali_rsaPublicKey , String securityRating , String merchantServerIp)  throws PayBizException{
+
 		RpUserPayConfig payConfig = rpUserPayConfigDao.getByUserNo(userNo, null);
 		if(payConfig != null){
 			throw new PayBizException(PayBizException.USER_PAY_CONFIG_IS_EXIST,"用户支付配置已存在");
 		}
-		
+
 		RpUserPayConfig rpUserPayConfig = new RpUserPayConfig();
 		rpUserPayConfig.setUserNo(userNo);
 		rpUserPayConfig.setUserName(userName);
@@ -156,8 +172,10 @@ public class RpUserPayConfigServiceImpl implements RpUserPayConfigService{
 		rpUserPayConfig.setPayKey(StringUtil.get32UUID());
 		rpUserPayConfig.setPaySecret(StringUtil.get32UUID());
 		rpUserPayConfig.setId(StringUtil.get32UUID());
+		rpUserPayConfig.setSecurityRating(securityRating);//安全等级
+		rpUserPayConfig.setMerchantServerIp(merchantServerIp);
 		saveData(rpUserPayConfig);
-		
+
 		//查询支付产品下有哪些支付方式
 		List<RpPayWay> payWayList = rpPayWayService.listByProductCode(productCode);
 		Map<String, String> map = new HashMap<String, String>();
@@ -165,7 +183,7 @@ public class RpUserPayConfigServiceImpl implements RpUserPayConfigService{
 		for(RpPayWay payWay : payWayList){
 	        map.put(payWay.getPayWayCode(), payWay.getPayWayName());
 		}
-		
+
 		for (String key : map.keySet()) {
 			if(key.equals(PayWayEnum.WEIXIN.name())){
 				//创建用户第三方支付信息
@@ -192,7 +210,7 @@ public class RpUserPayConfigServiceImpl implements RpUserPayConfigService{
 					rpUserPayInfo.setPayWayName(PayWayEnum.WEIXIN.getDesc());
 					rpUserPayInfoService.updateData(rpUserPayInfo);
 				}
-				
+
 			}else if(key.equals(PayWayEnum.ALIPAY.name())){
 				//创建用户第三方支付信息
 				RpUserPayInfo rpUserPayInfo = rpUserPayInfoService.getByUserNo(userNo, PayWayEnum.ALIPAY.name());
@@ -226,11 +244,11 @@ public class RpUserPayConfigServiceImpl implements RpUserPayConfigService{
 				}
 			}
 		}
-		
-		
-		
+
+
+
 	}
-	
+
 	/**
 	 * 删除支付产品
 	 * @param userNo
@@ -255,19 +273,33 @@ public class RpUserPayConfigServiceImpl implements RpUserPayConfigService{
 	public void updateUserPayConfig(String userNo, String productCode, String productName, Integer riskDay, String fundIntoType,
 			String isAutoSett, String appId, String merchantId, String partnerKey,
 			String ali_partner, String ali_sellerId, String ali_key, String ali_appid, String ali_rsaPrivateKey, String ali_rsaPublicKey)  throws PayBizException{
+
+			updateUserPayConfig( userNo,  productCode,  productName,  riskDay,  fundIntoType,
+				 isAutoSett,  appId,  merchantId,  partnerKey,
+				 ali_partner,  ali_sellerId,  ali_key,  ali_appid,  ali_rsaPrivateKey,  ali_rsaPublicKey  ,  null ,  null);
+	}
+	/**
+	 * 修改用户支付配置
+	 */
+	@Override
+	public void updateUserPayConfig(String userNo, String productCode, String productName, Integer riskDay, String fundIntoType,
+			String isAutoSett, String appId, String merchantId, String partnerKey,
+			String ali_partner, String ali_sellerId, String ali_key, String ali_appid, String ali_rsaPrivateKey, String ali_rsaPublicKey  , String securityRating , String merchantServerIp)  throws PayBizException{
 		RpUserPayConfig rpUserPayConfig = rpUserPayConfigDao.getByUserNo(userNo, null);
 		if(rpUserPayConfig == null){
 			throw new PayBizException(PayBizException.USER_PAY_CONFIG_IS_NOT_EXIST,"用户支付配置不存在");
 		}
-		
+
 		rpUserPayConfig.setProductCode(productCode);
 		rpUserPayConfig.setProductName(productName);
 		rpUserPayConfig.setRiskDay(riskDay);
 		rpUserPayConfig.setFundIntoType(fundIntoType);
 		rpUserPayConfig.setIsAutoSett(isAutoSett);
 		rpUserPayConfig.setEditTime(new Date());
+		rpUserPayConfig.setSecurityRating(securityRating);//安全等级
+		rpUserPayConfig.setMerchantServerIp(merchantServerIp);
 		updateData(rpUserPayConfig);
-		
+
 		//查询支付产品下有哪些支付方式
 		List<RpPayWay> payWayList = rpPayWayService.listByProductCode(productCode);
 		Map<String, String> map = new HashMap<String, String>();
@@ -275,7 +307,7 @@ public class RpUserPayConfigServiceImpl implements RpUserPayConfigService{
 		for(RpPayWay payWay : payWayList){
 			map.put(payWay.getPayWayCode(), payWay.getPayWayName());
 		}
-				
+
 		for (String key : map.keySet()) {
 			if(key.equals(PayWayEnum.WEIXIN.name())){
 				//创建用户第三方支付信息
@@ -302,7 +334,7 @@ public class RpUserPayConfigServiceImpl implements RpUserPayConfigService{
 					rpUserPayInfo.setPayWayName(PayWayEnum.WEIXIN.getDesc());
 					rpUserPayInfoService.updateData(rpUserPayInfo);
 				}
-						
+
 			}else if(key.equals(PayWayEnum.ALIPAY.name())){
 				//创建用户第三方支付信息
 				RpUserPayInfo rpUserPayInfo = rpUserPayInfoService.getByUserNo(userNo, PayWayEnum.ALIPAY.name());
@@ -337,7 +369,7 @@ public class RpUserPayConfigServiceImpl implements RpUserPayConfigService{
 			}
 		}
 	}
-	
+
 	/**
 	 * 审核
 	 * @param userNo
